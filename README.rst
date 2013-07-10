@@ -27,7 +27,7 @@ Where a, b and c are the parameters of the phase stepping curve:
 
     p = c + a \cos \theta + b \sin \theta
 
-More details can be shown with
+The help for the commandline parameters can be shown with
 
 .. code:: bash
 
