@@ -8,6 +8,7 @@ component analysis.
 
 from __future__ import division, print_function
 
+import importlib
 import numpy as np
 from numpy import sin, cos, pi
 
@@ -45,7 +46,7 @@ def phase_stepping_curve(c, v, phi, n):
     """
     p = 2 * pi / n #period
     xs = np.arange(n)
-    angles = p * xs - phi
+    angles = p * xs + phi
     return c * (1 + v * np.cos(angles))
 
 def least_squares_fit(phase_stepping_curve):
@@ -58,7 +59,7 @@ def least_squares_fit(phase_stepping_curve):
     xs = np.arange(n)
     p = 2 * pi / n #period
     angles = p * xs
-    A = np.vstack([1, np.cos(angles), np.sin(angles)]).T
+    A = np.vstack([np.ones_like(angles), np.cos(angles), -np.sin(angles)]).T
     c, a, b = np.linalg.lstsq(A, phase_stepping_curve)[0]
     return c, a, b
 
@@ -67,15 +68,39 @@ def fourier_fit(phase_stepping_curve):
     the fourier transform.
 
     """
+    n = phase_stepping_curve.shape[0]
     transformed = np.fft.rfft(phase_stepping_curve)
-    c = transformed[0]
-    a = transformed[1].real
-    b = transformed[1].imag
+    c = transformed[0].real / n
+    a = transformed[1].real / (n / 2)
+    b = transformed[1].imag / (n / 2)
     return c, a, b
 
 def main(args):
-    pass
+    """Calculate the three parameters a, b, c in the phase stepping curve:
+    y = c + a cos(px) + b sin(px) with the least squares and the fourier
+    component analysis.
+
+    Return the original parameters, the least squares estimates and the
+    fourier estimates.
+    """
+    constant = args.constant
+    phase = args.phase
+    visibility = args.visibility
+    steps = args.steps
+    noise = args.noise
+    noise_module = importlib.import_module("noise_types")
+    noise_function = getattr(noise_module, noise)
+    original_pars = cvphi_to_cab(constant, visibility, phase)
+    curve = phase_stepping_curve(
+            constant, visibility, phase, steps)
+    noisy_curve = curve + noise_function(curve)
+    least_squares_pars = least_squares_fit(noisy_curve)
+    fourier_pars = fourier_fit(noisy_curve)
+    return original_pars, least_squares_pars, fourier_pars
 
 if __name__ == '__main__':
     args = commandline_parser.parse_args()
-    main(args)
+    original_pars, least_squares_pars, fourier_pars = main(args)
+    print("original parameters:", original_pars)
+    print("least squares fit:", least_squares_pars)
+    print("fourier analysis:", fourier_pars)

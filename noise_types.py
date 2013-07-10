@@ -5,4 +5,4 @@
 import numpy as np
 
 poisson = np.sqrt
-zero = lambda x: 0
+zero = np.zeros_like
