@@ -15,6 +15,18 @@ and the fourier analysis type:
 
     python comparison.py -n 100
 
+The quantity displayed on the y axis is calculated as:
+
+.. math::
+
+    y = \sqrt{(c_{f} - c_{l})^2 + (a_{f} - a_{l})^2 + (b_{f} - b_{l})^2}
+
+Where a, b and c are the parameters of the phase stepping curve:
+
+.. math::
+
+    p = c + a \cos \theta + b \sin \theta
+
 More details can be shown with
 
 .. code:: bash

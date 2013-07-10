@@ -32,10 +32,13 @@ def main(args):
                     visibility, steps).split())
         original_pars, least_squares_pars, fourier_pars = fit_main(fit_args)
         differences.append(np.sum(
-            np.array(least_squares_pars) - np.array(fourier_pars)))
+            np.sqrt((np.array(least_squares_pars) -
+                np.array(fourier_pars))**2)))
     print()
     plt.figure()
     plt.plot(np.arange(tries), differences)
+    plt.ylabel("lst - fourier")
+    plt.xlabel("run number")
     plt.ion()
     plt.show()
     try:
