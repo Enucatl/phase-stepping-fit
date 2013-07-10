@@ -7,12 +7,26 @@ consistently.
 
 Usage
 ----------------------------------------
-to run the comparison 100 times and display the difference between the least squares
+To run the comparison 100 times with random input (visibility, average intensity, phase and phase steps)
+and display the difference between the least squares
 and the fourier analysis type:
 
 .. code:: bash
 
-    python comparison.py -n 100`.
+    python comparison.py -n 100
+
+More details can be shown with
+
+.. code:: bash
+
+    python comparison.py -h
+
+The code for the fits is in the ``phase_stepping_fit.py`` file. This can run
+one comparison and print the result. See the help:
+
+.. code:: bash
+
+    python phase_stepping_fit.py -h
 
 Requirements
 ----------------------------------------
