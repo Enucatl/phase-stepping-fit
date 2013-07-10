@@ -37,7 +37,7 @@ def main(args):
     print()
     plt.figure()
     plt.plot(np.arange(tries), differences)
-    plt.ylabel("lst - fourier")
+    plt.ylabel("difference")
     plt.xlabel("run number")
     plt.ion()
     plt.show()
