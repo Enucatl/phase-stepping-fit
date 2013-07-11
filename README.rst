@@ -21,7 +21,9 @@ The quantity displayed on the y axis is calculated as:
 
     y = \sqrt{(c_{f} - c_{l})^2 + (a_{f} - a_{l})^2 + (b_{f} - b_{l})^2}
 
-Where a, b and c are the parameters of the phase stepping curve:
+Where a, b and c are the parameters of the phase stepping curve, and the
+subscripts f and l refer to the fourier and least squares estimates
+respectively:
 
 .. math::
 
