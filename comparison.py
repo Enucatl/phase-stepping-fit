@@ -19,26 +19,35 @@ from progress_bar import progress_bar
 
 def main(args):
     tries = args.n
-    differences = []
+    differences = np.zeros((tries, 3))
     for i in xrange(tries):
         print(progress_bar((i + 1) / tries), end="\r")
         constant = random.uniform(100, 100000)
-        phase = random.uniform(-pi / 2, pi/2)
+        phase = random.uniform(-pi / 2, pi / 2)
         visibility = random.uniform(0, 1)
         steps = random.randint(4, 24)
         fit_args = fit_parser.parse_args(
-                """-c{0} -p{1} -v {2} -n{3}""".format(
+                """-c{0} -p{1} -v{2} -n{3}""".format(
                     constant, phase,
                     visibility, steps).split())
         original_pars, least_squares_pars, fourier_pars = fit_main(fit_args)
-        differences.append(np.sum(
-            np.sqrt((np.array(least_squares_pars) -
-                np.array(fourier_pars))**2)))
+        differences[i, :] = np.array(least_squares_pars) - np.array(fourier_pars)
     print()
     plt.figure()
-    plt.plot(np.arange(tries), differences)
-    plt.ylabel("difference")
+    plt.plot(np.arange(tries), differences[:, 0])
+    plt.ylabel("c_l - c_f")
     plt.xlabel("run number")
+    plt.savefig("c.difference.pdf")
+    plt.figure()
+    plt.plot(np.arange(tries), differences[:, 1])
+    plt.ylabel("a_l - a_f")
+    plt.xlabel("run number")
+    plt.savefig("a.difference.pdf")
+    plt.figure()
+    plt.plot(np.arange(tries), differences[:, 2])
+    plt.ylabel("b_l - b_f")
+    plt.xlabel("run number")
+    plt.savefig("b.difference.pdf")
     plt.ion()
     plt.show()
     try:
