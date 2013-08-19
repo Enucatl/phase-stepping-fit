@@ -2,6 +2,7 @@
 
 library(argparse)
 library(plyr)
+library(ggplot2)
 
 phase_stepping_curve = function(c, v, phi, n) {
     #Return the phase stepping curve sampled over one period
@@ -16,7 +17,7 @@ commandline_parser = ArgumentParser(
         description="test various fit methods for the phase stepping curves.") 
 
 commandline_parser$add_argument('-n',
-            type='integer', nargs='?', default=10000,
+            type='integer', nargs='?', default=100,
             help='number of comparisons')
 
 args = commandline_parser$parse_args()
@@ -29,12 +30,8 @@ steps = rep(15, tries)
 curves = Map(phase_stepping_curve,
              constants, visibilities, phases, steps)
 
-print(curves)
-
 noisy_curves = lapply(curves,
                       function(x) unlist(lapply(x, rpois, n=1)))
-
-print(noisy_curves)
 
 angles = Map(function(n) 2 * pi / n * (0:(n - 1)), steps)
 
@@ -49,26 +46,33 @@ weights = lapply(noisy_curves, function(x) 1 / x)
 weighted_fits = Map(lsfit, fit_matrices, noisy_curves, wt=weights)
 weighted_coefficients = Map(as.numeric,
                             Map(get, "coefficients", weighted_fits))
-weighted_coefficients = data.frame(do.call(rbind, weighted_coefficients))
 
 coefficients = Map(as.numeric, Map(get, "coefficients", fits))
-coefficients = data.frame(do.call(rbind, coefficients))
-coefficients$equal_weights_c = coefficients$X1
-coefficients$equal_weights_phi = atan(-coefficients$X3 / coefficients$X2)
-coefficients$equal_weights_v = sqrt(
-        coefficients$X2^2 + coefficients$X3^2) / coefficients$X1
-coefficients$orig_c = constants
-coefficients$orig_phi = phases
-coefficients$orig_v = visibilities
-coefficients$weighted_c = weighted_coefficients$X1
-coefficients$weighted_phi = atan(-weighted_coefficients$X3 /
-                                 weighted_coefficients$X2)
-coefficients$weighted_v = (sqrt(
-        weighted_coefficients$X2^2 + weighted_coefficients$X3^2)
-        / weighted_coefficients$X1)
-
-coefficients$X1 = NULL
-coefficients$X2 = NULL
-coefficients$X3 = NULL
-
-print(coefficients)
+coefficients = data.frame(do.call(rbind, coefficients), row.names=NULL)
+weighted_coefficients = data.frame(do.call(rbind, weighted_coefficients),
+                            row.names=NULL)
+original = data.frame(c=constants, phi=phases, v=visibilities)
+original$type = factor("original")
+unweighted_fit = data.frame(c=coefficients$X1,
+                            phi=atan(-coefficients$X3 / coefficients$X2),
+                            v=sqrt(
+        coefficients$X2^2 + coefficients$X3^2) / coefficients$X1)
+unweighted_fit$type = factor("unweighted")
+weighted_fit = data.frame(c=weighted_coefficients$X1,
+            phi=atan(-weighted_coefficients$X3 / weighted_coefficients$X2),
+            v=(sqrt(
+                weighted_coefficients$X2^2 + weighted_coefficients$X3^2) /
+                weighted_coefficients$X1))
+weighted_fit$type = factor("weighted")
+fits = rbind(unweighted_fit, weighted_fit)
+print(fits)
+#plot histograms
+hist_c = ggplot(fits, aes(phi, fill=type)) + geom_histogram(
+                    alpha=0.5,
+                    aes(y=..density..),
+                    position="identity")
+x11(type='cairo')
+print(hist_c)
+#dev.off()
+message("Press Return To Continue")
+invisible(readLines("stdin", n=1))
