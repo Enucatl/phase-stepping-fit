@@ -1,6 +1,7 @@
 #!/usr/bin/env Rscript
 
 library(argparse)
+library(gridExtra)
 library(plyr)
 library(ggplot2)
 
@@ -19,13 +20,25 @@ commandline_parser = ArgumentParser(
 commandline_parser$add_argument('-n',
             type='integer', nargs='?', default=100,
             help='number of comparisons')
+commandline_parser$add_argument('-v', '--visibility',
+            type='double', nargs='?', default=0.8,
+            help='visibility')
+commandline_parser$add_argument('-p', '--phase',
+            type='double', nargs='?', default=0,
+            help='phase')
+commandline_parser$add_argument('-c', '--constant',
+            type='double', nargs='?', default=40000,
+            help='average intensity')
+commandline_parser$add_argument('-s', '--steps',
+            type='integer', nargs='?', default=15,
+            help='phase steps')
 
 args = commandline_parser$parse_args()
 tries = args$n
-constants = rep(40000, tries)
-phases = rep(0, tries)
-visibilities = rep(0.8, tries)
-steps = rep(15, tries)
+constants = rep(args$c, tries)
+phases = rep(args$p, tries)
+visibilities = rep(args$v, tries)
+steps = rep(args$s, tries)
 
 curves = Map(phase_stepping_curve,
              constants, visibilities, phases, steps)
@@ -51,28 +64,47 @@ coefficients = Map(as.numeric, Map(get, "coefficients", fits))
 coefficients = data.frame(do.call(rbind, coefficients), row.names=NULL)
 weighted_coefficients = data.frame(do.call(rbind, weighted_coefficients),
                             row.names=NULL)
-original = data.frame(c=constants, phi=phases, v=visibilities)
+original = data.frame(constant=constants, phase=phases, visibility=visibilities)
 original$type = factor("original")
-unweighted_fit = data.frame(c=coefficients$X1,
-                            phi=atan(-coefficients$X3 / coefficients$X2),
-                            v=sqrt(
+unweighted_fit = data.frame(constant=coefficients$X1,
+                            phase=atan(-coefficients$X3 / coefficients$X2),
+                            visibility=sqrt(
         coefficients$X2^2 + coefficients$X3^2) / coefficients$X1)
 unweighted_fit$type = factor("unweighted")
-weighted_fit = data.frame(c=weighted_coefficients$X1,
-            phi=atan(-weighted_coefficients$X3 / weighted_coefficients$X2),
-            v=(sqrt(
+weighted_fit = data.frame(constant=weighted_coefficients$X1,
+            phase=atan(-weighted_coefficients$X3 / weighted_coefficients$X2),
+            visibility=(sqrt(
                 weighted_coefficients$X2^2 + weighted_coefficients$X3^2) /
                 weighted_coefficients$X1))
 weighted_fit$type = factor("weighted")
 fits = rbind(unweighted_fit, weighted_fit)
-print(fits)
+#print(fits)
 #plot histograms
-hist_c = ggplot(fits, aes(phi, fill=type)) + geom_histogram(
+hist_constant = ggplot(fits, aes(constant, fill=type)) + geom_histogram(
                     alpha=0.5,
-                    aes(y=..density..),
-                    position="identity")
-x11(type='cairo')
-print(hist_c)
-#dev.off()
+                    position="identity",
+                    binwidth=5)
+hist_phase = ggplot(fits, aes(phase, fill=type)) + geom_histogram(
+                    alpha=0.5,
+                    position="identity",
+                    binwidth=0.00015)
+hist_visibility = ggplot(fits, aes(visibility, fill=type)) + geom_histogram(
+                    alpha=0.5,
+                    position="identity",
+                    binwidth=0.0001)
+x11(width=20)
+histograms = arrangeGrob(hist_constant, hist_phase, hist_visibility, nrow=1)
+print(histograms)
+ggsave(sprintf("histograms%.2f.pdf", args$v), histograms)
+
+#statistical tests
+#variances
+print(var.test(weighted_fit$visibility, unweighted_fit$visibility))
+print(var.test(weighted_fit$phase, unweighted_fit$phase))
+print(var.test(weighted_fit$constant, unweighted_fit$constant))
+#means
+print(t.test(weighted_fit$visibility, unweighted_fit$visibility))
+print(t.test(weighted_fit$phase, unweighted_fit$phase))
+print(t.test(weighted_fit$constant, unweighted_fit$constant, var.equal=TRUE))
 message("Press Return To Continue")
 invisible(readLines("stdin", n=1))
