@@ -21,10 +21,10 @@ commandline_parser$add_argument('-n',
 
 args = commandline_parser$parse_args()
 tries = args$n
-constants = runif(tries, 100, 100000)
-phases = runif(tries, -pi / 2, pi / 2)
-visibilities = runif(tries, 0, 1)
-steps = sample(4:24, tries, replace=TRUE)
+constants = rep(40000, tries)
+phases = rep(0, tries)
+visibilities = rep(0.8, tries)
+steps = rep(15, tries)
 
 curves = Map(phase_stepping_curve,
              constants, visibilities, phases, steps)
