@@ -44,9 +44,9 @@ curves = Map(phase_stepping_curve,
              constants, visibilities, phases, steps)
 
 noisy_curves = lapply(curves,
-                      function(x) unlist(lapply(x, rpois, n=1)))
+                function(x) unlist(lapply(x, rpois, n=1)))
 
-angles = Map(function(n) 2 * pi / n * (0:(n - 1)), steps)
+angles = lapply(steps, function(n) 2 * pi / n * (0:(n - 1)))
 
 fit_matrices = Map(cbind,
                    Map(cos, angles),
@@ -59,7 +59,16 @@ weights = lapply(noisy_curves, function(x) 1 / x)
 weighted_fits = Map(lsfit, fit_matrices, noisy_curves, wt=weights)
 weighted_coefficients = Map(as.numeric,
                             Map(get, "coefficients", weighted_fits))
+fft_coefficients = lapply(noisy_curves, fft)
+fft_coefficients = lapply(fft_coefficients, function(x) x / args$s)
+fft_coefficients = data.frame(do.call(rbind, fft_coefficients))
 
+fft_fit = data.frame(constant=Mod(fft_coefficients$X1),
+                     phase=Arg(fft_coefficients$X2),
+                     visibility= 2 * (Mod(fft_coefficients$X2) /
+                                 Mod(fft_coefficients$X1))
+                     )
+fft_fit$type = factor("fft")
 coefficients = Map(as.numeric, Map(get, "coefficients", fits))
 coefficients = data.frame(do.call(rbind, coefficients), row.names=NULL)
 weighted_coefficients = data.frame(do.call(rbind, weighted_coefficients),
@@ -78,7 +87,8 @@ weighted_fit = data.frame(constant=weighted_coefficients$X1,
                 weighted_coefficients$X1))
 weighted_fit$type = factor("weighted")
 fits = rbind(unweighted_fit, weighted_fit)
-#print(fits)
+#print(unweighted_fit)
+#print(fft_fit)
 #plot histograms
 hist_constant = ggplot(fits, aes(constant, fill=type)) + geom_histogram(
                     alpha=0.5,
