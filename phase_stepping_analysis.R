@@ -2,6 +2,10 @@
 
 library(argparse)
 library(plyr)
+library(foreach)
+library(doParallel)
+
+registerDoParallel(cores=7)
 
 phase_stepping_curve = function(constant, visibility, phase, steps) {
     period = 2 * pi / steps
@@ -66,34 +70,37 @@ args = commandline_parser$parse_args()
 n = args$n
 
 phase = 0
-steps = 15
+steps = 9
 
-constants = seq(from=1000, to=100000, by=1000)
+constants = seq(from=100, to=20000, by=1000)
 visibilities = seq(from=0.01, to=0.90, by=0.01)
 
-visibility_analysis = data.frame()
-
-for (visibility in visibilities) {
-    constant = 50000
-    curve = phase_stepping_curve(constant, visibility, phase, steps)
-    noisy_curves = get_noisy_curves(n, curve)
-    analysed = analyse_fits(fit_curves(noisy_curves))
-    analysed$constant = constant
-    analysed$visibility = visibility
-    analysed$steps = steps
-    visibility_analysis = rbind(visibility_analysis, analysed)
+visibility_analysis = foreach(visibility=visibilities,
+                              .combine=rbind) %dopar% {
+    foreach(constant=c(1000, 10000, 50000),
+            .combine=rbind) %do% {
+        curve = phase_stepping_curve(constant, visibility, phase, steps)
+        noisy_curves = get_noisy_curves(n, curve)
+        analysed = analyse_fits(fit_curves(noisy_curves))
+        analysed$constant = constant
+        analysed$visibility = visibility
+        analysed$steps = steps
+        analysed
+    }
 }
 
-constant_analysis = data.frame()
-for (constant in constants) {
-    visibility = 0.2
-    curve = phase_stepping_curve(constant, visibility, phase, steps)
-    noisy_curves = get_noisy_curves(n, curve)
-    analysed = analyse_fits(fit_curves(noisy_curves))
-    analysed$constant = constant
-    analysed$visibility = visibility
-    analysed$steps = steps
-    constant_analysis = rbind(constant_analysis, analysed)
+constant_analysis = foreach(constant=constants,
+                            .combine=rbind) %dopar% {
+    foreach(visibility=c(0.05, 0.3, 0.9),
+            .combine=rbind) %do% {
+        curve = phase_stepping_curve(constant, visibility, phase, steps)
+        noisy_curves = get_noisy_curves(n, curve)
+        analysed = analyse_fits(fit_curves(noisy_curves))
+        analysed$constant = constant
+        analysed$visibility = visibility
+        analysed$steps = steps
+        analysed
+    }
 }
 
 save(visibility_analysis, constant_analysis, file="data_analysis.rda")

@@ -14,61 +14,61 @@ args = commandline_parser$parse_args()
 load(args$f)
 
 alpha=0.2
-graph_phase_constant = ggplot(constant_analysis,
+graph_sd_phase_constant = ggplot(constant_analysis,
                        aes(x=constant,
-                           y=mean_phase,
-                           color=type)) + geom_line()
-graph_phase_constant = graph_phase_constant + geom_ribbon(
-                        aes(x=constant,
-                            ymin=mean_phase-sd_phase,
-                            ymax=mean_phase+sd_phase,
-                            linetype=NA,
-                            fill=type,
-                            ),
-                            alpha=alpha,
-                            )
-graph_phase_visibility = ggplot(visibility_analysis,
+                           y=sd_phase,
+                           color=type,
+                           linetype=factor(visibility)
+                           )) + geom_line(
+                       aes(group=interaction(type, visibility)))
+graph_sd_phase_constant = graph_sd_phase_constant + scale_y_log10(
+                            name="phase standard deviation"
+                            ) + scale_linetype_discrete(name="visibility")
+graph_sd_phase_visibility = ggplot(visibility_analysis,
                        aes(x=visibility,
-                           y=mean_phase,
-                           color=type)) + geom_line()
-graph_phase_visibility = graph_phase_visibility + geom_ribbon(
-                        aes(x=visibility,
-                            ymin=mean_phase-sd_phase,
-                            ymax=mean_phase+sd_phase,
-                            linetype=NA,
-                            fill=type
-                            ), alpha=alpha) + scale_x_log10()
-                    
-graph_visibility_visibility = ggplot(visibility_analysis,
+                           y=sd_phase,
+                           color=type,
+                           linetype=factor(constant),
+                           )) + geom_line(
+                       aes(group=interaction(type, constant)))
+graph_sd_phase_visibility = graph_sd_phase_visibility + scale_y_log10(
+                            name="phase standard deviation"
+                            ) + scale_linetype_discrete(name="constant"
+                            ) + annotate(geom="text",
+                            x=0.5, y=0.7, label=sprintf("
+                            Parameters for all the plots
+                            phase steps = %i
+                            phase value = %.2f
+                            simulated curves per point = 100000
+                            poisson noise
+                            ", 9, 0))
+graph_sd_visibility_constant = ggplot(constant_analysis,
+                       aes(x=constant,
+                           y=sd_visibility,
+                           color=type,
+                           linetype=factor(visibility),
+                           )) + geom_line(
+                       aes(group=interaction(type, visibility)))
+graph_sd_visibility_constant = graph_sd_visibility_constant + scale_y_log10(
+                            name="visibility standard deviation"
+                            ) + scale_linetype_discrete(name="visibility")
+graph_sd_visibility_visibility = ggplot(visibility_analysis,
                        aes(x=visibility,
-                           y=mean_visibility,
-                           color=type)) + geom_line()
-graph_visibility_visibility = graph_visibility_visibility + geom_ribbon(
-                        aes(x=visibility,
-                            ymin=mean_visibility-sd_visibility,
-                            ymax=mean_visibility+sd_visibility,
-                            linetype=NA,
-                            fill=type
-                            )
-                        ,alpha=alpha) + scale_x_log10() + scale_y_log10()
+                           y=sd_visibility,
+                           color=type,
+                           linetype=factor(constant),
+                           )) + geom_line(
+                       aes(group=interaction(type, constant)))
+graph_sd_visibility_visibility = graph_sd_visibility_visibility + scale_y_log10(
+                            name="visibility standard deviation"
+                            ) + scale_linetype_discrete(name="constant")
 
-graph_visibility_constant = ggplot(constant_analysis,
-                       aes(x=constant,
-                           y=mean_visibility,
-                           color=type)) + geom_line()
-graph_visibility_constant = graph_visibility_constant + geom_ribbon(
-                        aes(x=constant,
-                            ymin=mean_visibility-sd_visibility,
-                            ymax=mean_visibility+sd_visibility,
-                            linetype=NA,
-                            fill=type
-                            ),
-                            alpha=alpha) + scale_y_log10()
 graphs = arrangeGrob(
-            graph_phase_constant, graph_phase_visibility,
-            graph_visibility_constant, graph_visibility_visibility,
+            graph_sd_phase_constant, graph_sd_phase_visibility,
+            graph_sd_visibility_constant, graph_sd_visibility_visibility,
             nrow=2)
-x11(width=20, height=10)
+x11(width=20, height=12)
 print(graphs)
+ggsave(sprintf("graphs%s.pdf", args$f), graphs)
 message("Press Return To Continue")
 invisible(readLines("stdin", n=1))
