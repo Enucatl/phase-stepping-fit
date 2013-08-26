@@ -1,9 +1,11 @@
 #!/usr/bin/env Rscript
 
 library(argparse)
-library(plyr)
 library(foreach)
 library(doParallel)
+library(data.table)
+library(e1071)
+library(nortest)
 
 registerDoParallel(cores=7)
 
@@ -39,22 +41,30 @@ fit_curves = function(curves) {
                         fit_coefficients[2, ]^2 + fit_coefficients[3, ]^2) /
                         fit_coefficients[1, ]))
     fit_df$type = factor("ls")
-    return(rbind(fft_df, fit_df))
+    return(data.table(rbind(fft_df, fit_df)))
 }
+
+statistical_tests = function(x) {
+    return(list(
+                mean=mean(x),
+                sd=sd(x),
+                kurtosis=kurtosis(x),
+                skewness=skewness(x),
+                normality.p.value.lilliefors=lillie.test(x)$p.value,
+                normality.p.value.shapiro=shapiro.test(x)$p.value))
+}
+
+names = c("mean", "sd", "kurtosis", "skewness",
+          "normality.p.value.lilliefors",
+          "normality.p.value.shapiro")
+names = c(names, names)
 
 analyse_fits = function(fit_df) {
     #get mean and standard deviation for the three parameters
-    #print(fit_df)
-    result = ddply(fit_df,
-                   .variables="type",
-                   .fun=summarise,
-                   mean_constant=mean(constant),
-                   sd_constant=sd(constant),
-                   mean_phase=mean(phase),
-                   sd_phase=sd(phase),
-                   mean_visibility=mean(visibility),
-                   sd_visibility=sd(visibility)
-                   )
+    setkey(fit_df, type)
+    result = fit_df[, lapply(.SD, statistical_tests), by=type]
+    result$stat = names
+    setkeyv(result, c("stat", "type"))
     return(result)
 }
 
@@ -62,7 +72,7 @@ commandline_parser = ArgumentParser(
         description="test various fit methods for the phase stepping curves.") 
 
 commandline_parser$add_argument('-n',
-            type='integer', nargs='?', default=10000,
+            type='integer', nargs='?', default=10,
             help='number of curves per point')
 
 args = commandline_parser$parse_args()
@@ -82,10 +92,13 @@ visibility_analysis = foreach(visibility=visibilities,
         curve = phase_stepping_curve(constant, visibility, phase, steps)
         noisy_curves = get_noisy_curves(n, curve)
         analysed = analyse_fits(fit_curves(noisy_curves))
-        analysed$constant = constant
-        analysed$visibility = visibility
-        analysed$steps = steps
-        analysed
+        rbind(analysed,
+              list(type="true",
+                   constant=constant,
+                   phase=phase,
+                   visibility=visibility,
+                   stat="mean"
+                   ))
     }
 }
 
