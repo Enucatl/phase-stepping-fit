@@ -12,71 +12,86 @@ commandline_parser$add_argument('-f', '--file',
             type='character', nargs='?', default='data_analysis.rda')
 
 args = commandline_parser$parse_args()
-load(args$f)
+load(args$f) #constant_analysis, visibility_analysis
 setkeyv(constant_analysis, c("stat", "type"))
 setkeyv(visibility_analysis, c("stat", "type"))
-print(constant_analysis)
 
-graph_sd_phase_constant = ggplot(constant_analysis[J("sd")],
-                       aes(x=true_constant,
-                           y=phase,
-                           color=type,
-                           linetype=as.factor(true_visibility)
-                           )) + geom_line(
-                       aes(group=interaction(type, true_visibility)))
-graph_sd_phase_constant = graph_sd_phase_constant + scale_y_log10(
-                            name="phase standard deviation"
-                            ) + scale_linetype_discrete(
-                            name="visibility") + scale_x_continuous(
-                            name="constant")
-graph_sd_phase_visibility = ggplot(visibility_analysis[J("sd")],
-                       aes(x=true_visibility,
-                           y=phase,
-                           color=type,
-                           linetype=as.factor(true_constant),
-                           )) + geom_line(
-                       aes(group=interaction(type, true_constant)))
-graph_sd_phase_visibility = graph_sd_phase_visibility + scale_y_log10(
-                            name="phase standard deviation"
-                            ) + scale_linetype_discrete(name="constant"
-                            ) + annotate(geom="text",
-                            x=0.5, y=0.7, label=sprintf("
-                            Parameters for all the plots
-                            phase steps = %i
-                            phase value = %.2f
-                            simulated curves per point = 100000
-                            poisson noise
-                            ", 9, 0)) + scale_x_continuous(
-                            name="visibility")   
-graph_sd_visibility_constant = ggplot(constant_analysis[J("sd")],
-                       aes(x=true_constant,
-                           y=visibility,
-                           color=type,
-                           linetype=as.factor(true_visibility),
-                           )) + geom_line(
-                       aes(group=interaction(type, true_visibility)))
-graph_sd_visibility_constant = graph_sd_visibility_constant + scale_y_log10(
-                            name="visibility standard deviation"
-                            ) + scale_linetype_discrete(name="visibility") + scale_x_continuous(
-                            name="constant")   
-graph_sd_visibility_visibility = ggplot(visibility_analysis[J("sd")],
-                       aes(x=true_visibility,
-                           y=visibility,
-                           color=type,
-                           linetype=as.factor(true_constant),
-                           )) + geom_line(
-                       aes(group=interaction(type, true_constant)))
-graph_sd_visibility_visibility = graph_sd_visibility_visibility + scale_y_log10(
-                            name="visibility standard deviation"
-                            ) + scale_linetype_discrete(name="constant")    + scale_x_continuous(
-                            name="visibility")   
+names = c("mean", "sd", "kurtosis", "skewness")
+scales = list(
+              mean=c(scale_y_continuous, scale_y_continuous,
+                     scale_y_continuous, scale_y_continuous),
+              sd=c(scale_y_log10, scale_y_log10,
+                     scale_y_log10, scale_y_continuous),
+              kurtosis=c(scale_y_continuous, scale_y_continuous,
+                     scale_y_continuous, scale_y_continuous),
+              skewness=c(scale_y_continuous, scale_y_continuous,
+                     scale_y_continuous, scale_y_continuous)
+              )
 
-graphs = arrangeGrob(
-            graph_sd_phase_constant, graph_sd_phase_visibility,
-            graph_sd_visibility_constant, graph_sd_visibility_visibility,
-            nrow=2)
-x11(width=20, height=12)
-print(graphs)
-ggsave(sprintf("graphs%s.pdf", args$f), graphs)
-message("Press Return To Continue")
-invisible(readLines("stdin", n=1))
+
+for(statistical_test in names) {
+    graph_phase_constant = ggplot(constant_analysis[J(statistical_test)],
+                        aes(x=true_constant,
+                            y=phase,
+                            color=type,
+                            linetype=as.factor(true_visibility)
+                            )) + geom_line(
+                        aes(group=interaction(type, true_visibility)))
+    graph_phase_constant = graph_phase_constant + scales[[statistical_test]][[1]](
+                                name=sprintf("phase %s", statistical_test)
+                                ) + scale_linetype_discrete(
+                                name="visibility") +
+                                scale_x_continuous(name="constant")
+    graph_phase_visibility = ggplot(visibility_analysis[J(statistical_test)],
+                        aes(x=true_visibility,
+                            y=phase,
+                            color=type,
+                            linetype=as.factor(true_constant),
+                            )) + geom_line(
+                        aes(group=interaction(type, true_constant)))
+    graph_phase_visibility = graph_phase_visibility + scales[[statistical_test]][[2]](
+                                name=sprintf("phase %s", statistical_test)
+                                ) + scale_linetype_discrete(name="constant"
+                                ) + annotate(geom="text",
+                                x=Inf, y=Inf, hjust=1, vjust=1, label=sprintf("
+                                    Parameters for all the plots
+                                    phase steps = %i
+                                    phase value = %.2f
+                                    simulated curves per point = %i
+                                    poisson noise
+                                ", steps, phase, n)) + scale_x_continuous(
+                                name="visibility")   
+    graph_visibility_constant = ggplot(constant_analysis[J(statistical_test)],
+                        aes(x=true_constant,
+                            y=visibility,
+                            color=type,
+                            linetype=as.factor(true_visibility),
+                            )) + geom_line(
+                        aes(group=interaction(type, true_visibility)))
+    graph_visibility_constant = graph_visibility_constant + scales[[statistical_test]][[3]](
+                                name=sprintf("visibility %s", statistical_test)
+                                ) + scale_linetype_discrete(name="visibility") + scale_x_continuous(
+                                name="constant")   
+    graph_visibility_visibility = ggplot(visibility_analysis[J(statistical_test)],
+                        aes(x=true_visibility,
+                            y=visibility,
+                            color=type,
+                            linetype=as.factor(true_constant),
+                            )) + geom_line(
+                        aes(group=interaction(type, true_constant)))
+    graph_visibility_visibility = graph_visibility_visibility + scales[[statistical_test]][[4]](
+                                name=sprintf("visibility %s", statistical_test)
+                                ) + scale_linetype_discrete(name="constant")    + scale_x_continuous(
+                                name="visibility")   
+
+    graphs = arrangeGrob(
+                graph_phase_constant, graph_phase_visibility,
+                graph_visibility_constant, graph_visibility_visibility,
+                nrow=2)
+    x11(width=20, height=12)
+    print(graphs)
+    ggsave(sprintf("graphs_%s_%s.pdf", args$f, statistical_test), graphs)
+}
+warnings()
+#message("Press Return To Continue")
+#invisible(readLines("stdin", n=1))

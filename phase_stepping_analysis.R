@@ -124,4 +124,5 @@ constant_analysis = foreach(constant=constants,
     }
 }
 
-save(visibility_analysis, constant_analysis, file="data_analysis.rda")
+save(visibility_analysis, constant_analysis,
+     n, steps, phase, file="data_analysis.rda")
