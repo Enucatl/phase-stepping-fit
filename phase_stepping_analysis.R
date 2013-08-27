@@ -45,25 +45,25 @@ fit_curves = function(curves) {
 }
 
 statistical_tests = function(x) {
-    return(list(
-                mean=mean(x),
-                sd=sd(x),
-                kurtosis=kurtosis(x),
-                skewness=skewness(x),
-                normality.p.value.lilliefors=lillie.test(x)$p.value,
-                normality.p.value.shapiro=shapiro.test(x)$p.value))
+    return(c(
+                mean(x),
+                sd(x),
+                kurtosis(x),
+                skewness(x),
+                lillie.test(x)$p.value,
+                shapiro.test(x)$p.value))
 }
 
-names = c("mean", "sd", "kurtosis", "skewness",
+names = c("mean", "sd",
+          "kurtosis", "skewness",
           "normality.p.value.lilliefors",
           "normality.p.value.shapiro")
-names = c(names, names)
 
 analyse_fits = function(fit_df) {
-    #get mean and standard deviation for the three parameters
+    #summarise the data from the phase stepping curves with the above list
+    #of statistical tests
     setkey(fit_df, type)
-    result = fit_df[, lapply(.SD, statistical_tests), by=type]
-    result$stat = names
+    result = fit_df[, c(list(stat=names), lapply(.SD, statistical_tests)), by=type]
     setkeyv(result, c("stat", "type"))
     return(result)
 }
@@ -82,8 +82,18 @@ n = args$n
 phase = 0
 steps = 9
 
-constants = seq(from=100, to=20000, by=1000)
-visibilities = seq(from=0.01, to=0.90, by=0.01)
+constants = c(
+              seq(from=50, to=550, by=100),
+              seq(from=1000, to=10000, by=1000),
+              seq(from=20000, to=50000, by=10000)
+              )
+
+visibilities = c(
+                 seq(from=0.01, to=0.20, by=0.01),
+                 seq(from=0.25, to=0.55, by=0.05),
+                 seq(from=0.55, to=0.95, by=0.10)
+                 )
+
 
 visibility_analysis = foreach(visibility=visibilities,
                               .combine=rbind) %dopar% {
@@ -92,13 +102,10 @@ visibility_analysis = foreach(visibility=visibilities,
         curve = phase_stepping_curve(constant, visibility, phase, steps)
         noisy_curves = get_noisy_curves(n, curve)
         analysed = analyse_fits(fit_curves(noisy_curves))
-        rbind(analysed,
-              list(type="true",
-                   constant=constant,
-                   phase=phase,
-                   visibility=visibility,
-                   stat="mean"
-                   ))
+        analysed$true_constant = constant
+        analysed$true_phase = phase
+        analysed$true_visibility = visibility
+        analysed
     }
 }
 
@@ -109,9 +116,9 @@ constant_analysis = foreach(constant=constants,
         curve = phase_stepping_curve(constant, visibility, phase, steps)
         noisy_curves = get_noisy_curves(n, curve)
         analysed = analyse_fits(fit_curves(noisy_curves))
-        analysed$constant = constant
-        analysed$visibility = visibility
-        analysed$steps = steps
+        analysed$true_constant = constant
+        analysed$true_phase = phase
+        analysed$true_visibility = visibility
         analysed
     }
 }
