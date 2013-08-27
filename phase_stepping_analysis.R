@@ -26,22 +26,25 @@ fit_curves = function(curves) {
     n = dim(curves)[[1]]
     angles = 2 * pi / n * (0:(n - 1))
     fit_matrix = cbind(cos(angles), sin(angles))
-    fft_coefficients = apply(curves, 2, fft) / n
+    fft_coefficients = apply(curves, 2, fft)
+    curves[curves == 0] = 0.01 #avoid zero division errors
     fit_coefficients = apply(curves, 2, function(y, ...)
             coef(lm(y ~ fit_matrix, weights=1/y)))
-    fft_df = data.frame(constant=Mod(fft_coefficients[1, ]),
-                        phase=Arg(fft_coefficients[2, ]),
-                        visibility=2 * (Mod(fft_coefficients[2, ]) /
-                                        Mod(fft_coefficients[1, ])))
-    fft_df$type = factor("fft")
-    fit_df = data.frame(constant=fit_coefficients[1, ],
-                        phase=atan(-fit_coefficients[3, ] /
-                                   fit_coefficients[2, ]),
-                        visibility=(sqrt(
-                        fit_coefficients[2, ]^2 + fit_coefficients[3, ]^2) /
-                        fit_coefficients[1, ]))
-    fit_df$type = factor("ls")
-    return(data.table(rbind(fft_df, fit_df)))
+    fft_constants = Re(fft_coefficients[1, ])
+    fft_first = fft_coefficients[2, ]
+    fft_df = data.table(constant=fft_constants / n,
+                        phase=Arg(fft_first),
+                        visibility=2 * Mod(fft_first) / fft_constants)
+    fft_df$type = "fft"
+    fit_constants = fit_coefficients[1, ]
+    bs = fit_coefficients[3, ]
+    as = fit_coefficients[2, ]
+    fit_df = data.table(constant=fit_constants, 
+                        phase=atan(-bs / as),
+                        visibility=(
+                        sqrt(as^2 + bs^2) / fit_constants))
+    fit_df$type = "ls"
+    return(rbindlist(list(fft_df, fit_df)))
 }
 
 statistical_tests = function(x) {
@@ -49,15 +52,13 @@ statistical_tests = function(x) {
                 mean(x),
                 sd(x),
                 kurtosis(x),
-                skewness(x),
-                lillie.test(x)$p.value,
-                shapiro.test(x)$p.value))
+                skewness(x)
+                ))
 }
 
 names = c("mean", "sd",
-          "kurtosis", "skewness",
-          "normality.p.value.lilliefors",
-          "normality.p.value.shapiro")
+          "kurtosis", "skewness"
+          )
 
 analyse_fits = function(fit_df) {
     #summarise the data from the phase stepping curves with the above list
@@ -91,7 +92,7 @@ constants = c(
 visibilities = c(
                  seq(from=0.01, to=0.20, by=0.01),
                  seq(from=0.25, to=0.55, by=0.05),
-                 seq(from=0.55, to=0.95, by=0.10)
+                 seq(from=0.60, to=0.90, by=0.10)
                  )
 
 

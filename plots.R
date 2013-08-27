@@ -15,6 +15,7 @@ args = commandline_parser$parse_args()
 load(args$f)
 setkeyv(constant_analysis, c("stat", "type"))
 setkeyv(visibility_analysis, c("stat", "type"))
+print(constant_analysis)
 
 graph_sd_phase_constant = ggplot(constant_analysis[J("sd")],
                        aes(x=true_constant,
