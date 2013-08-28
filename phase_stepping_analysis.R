@@ -35,7 +35,7 @@ fit_curves = function(curves) {
     fft_df = data.table(constant=fft_constants / n,
                         phase=Arg(fft_first),
                         visibility=2 * Mod(fft_first) / fft_constants)
-    fft_df$type = "fft"
+    fft_df$algorithm = "fft"
     fit_constants = fit_coefficients[1, ]
     bs = fit_coefficients[3, ]
     as = fit_coefficients[2, ]
@@ -43,7 +43,7 @@ fit_curves = function(curves) {
                         phase=atan(-bs / as),
                         visibility=(
                         sqrt(as^2 + bs^2) / fit_constants))
-    fit_df$type = "ls"
+    fit_df$algorithm = "ls"
     return(rbindlist(list(fft_df, fit_df)))
 }
 
@@ -63,9 +63,9 @@ names = c("mean", "sd",
 analyse_fits = function(fit_df) {
     #summarise the data from the phase stepping curves with the above list
     #of statistical tests
-    setkey(fit_df, type)
-    result = fit_df[, c(list(stat=names), lapply(.SD, statistical_tests)), by=type]
-    setkeyv(result, c("stat", "type"))
+    setkey(fit_df, algorithm)
+    result = fit_df[, c(list(stat=names), lapply(.SD, statistical_tests)), by=algorithm]
+    setkeyv(result, c("stat", "algorithm"))
     return(result)
 }
 

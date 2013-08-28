@@ -4,3 +4,5 @@
 .R*
 *.log
 *.rda
+table
+Rprof.out

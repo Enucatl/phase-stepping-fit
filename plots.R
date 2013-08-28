@@ -13,8 +13,8 @@ commandline_parser$add_argument('-f', '--file',
 
 args = commandline_parser$parse_args()
 load(args$f) #constant_analysis, visibility_analysis
-setkeyv(constant_analysis, c("stat", "type"))
-setkeyv(visibility_analysis, c("stat", "type"))
+setkeyv(constant_analysis, c("stat", "algorithm"))
+setkeyv(visibility_analysis, c("stat", "algorithm"))
 
 names = c("mean", "sd", "kurtosis", "skewness")
 scales = list(
@@ -33,10 +33,10 @@ for(statistical_test in names) {
     graph_phase_constant = ggplot(constant_analysis[J(statistical_test)],
                         aes(x=true_constant,
                             y=phase,
-                            color=type,
+                            color=algorithm,
                             linetype=as.factor(true_visibility)
                             )) + geom_line(
-                        aes(group=interaction(type, true_visibility)))
+                        aes(group=interaction(algorithm, true_visibility)))
     graph_phase_constant = graph_phase_constant + scales[[statistical_test]][[1]](
                                 name=sprintf("phase %s", statistical_test)
                                 ) + scale_linetype_discrete(
@@ -45,10 +45,10 @@ for(statistical_test in names) {
     graph_phase_visibility = ggplot(visibility_analysis[J(statistical_test)],
                         aes(x=true_visibility,
                             y=phase,
-                            color=type,
+                            color=algorithm,
                             linetype=as.factor(true_constant),
                             )) + geom_line(
-                        aes(group=interaction(type, true_constant)))
+                        aes(group=interaction(algorithm, true_constant)))
     graph_phase_visibility = graph_phase_visibility + scales[[statistical_test]][[2]](
                                 name=sprintf("phase %s", statistical_test)
                                 ) + scale_linetype_discrete(name="constant"
@@ -64,10 +64,10 @@ for(statistical_test in names) {
     graph_visibility_constant = ggplot(constant_analysis[J(statistical_test)],
                         aes(x=true_constant,
                             y=visibility,
-                            color=type,
+                            color=algorithm,
                             linetype=as.factor(true_visibility),
                             )) + geom_line(
-                        aes(group=interaction(type, true_visibility)))
+                        aes(group=interaction(algorithm, true_visibility)))
     graph_visibility_constant = graph_visibility_constant + scales[[statistical_test]][[3]](
                                 name=sprintf("visibility %s", statistical_test)
                                 ) + scale_linetype_discrete(name="visibility") + scale_x_continuous(
@@ -75,10 +75,10 @@ for(statistical_test in names) {
     graph_visibility_visibility = ggplot(visibility_analysis[J(statistical_test)],
                         aes(x=true_visibility,
                             y=visibility,
-                            color=type,
+                            color=algorithm,
                             linetype=as.factor(true_constant),
                             )) + geom_line(
-                        aes(group=interaction(type, true_constant)))
+                        aes(group=interaction(algorithm, true_constant)))
     graph_visibility_visibility = graph_visibility_visibility + scales[[statistical_test]][[4]](
                                 name=sprintf("visibility %s", statistical_test)
                                 ) + scale_linetype_discrete(name="constant")    + scale_x_continuous(
