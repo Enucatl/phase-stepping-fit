@@ -3,10 +3,12 @@
 library(microbenchmark)
 library(data.table)
 library(ggplot2)
+library(argparse)
+library(fftw)
 
 fft_fit = function(curve) {
     n = length(curve)
-    fft_coefficients = fft(curve)
+    fft_coefficients = FFT(as.numeric(curve))
     constant = Re(fft_coefficients[[1]])
     first = fft_coefficients[[2]]
     return(data.table(constant=constant / n,
@@ -43,7 +45,7 @@ curve = phase_stepping_curve(constant=1000,
                              phase=0,
                              steps=10)
 
-steps = seq(4, 40)
+steps = seq(4, 104, by=10)
 curve_list = lapply(steps,
                     phase_stepping_curve, constant=1000,
                     visibility=0.5, phase=0)
@@ -53,8 +55,19 @@ curve_list = lapply(steps,
 fft_list = lapply(curve_list, function(x) call(name="fft_fit", x))
 ls_list = lapply(curve_list, function(x) call(name="ls_fit", x))
 
-fft_benchmark = data.table(summary(microbenchmark(list=fft_list, times=1000)))
-ls_benchmark = data.table(summary(microbenchmark(list=ls_list, times=1000)))
+commandline_parser = ArgumentParser(
+        description="benchmark the fft vs the ls fit") 
+
+commandline_parser$add_argument('-n',
+            type='integer', nargs='?', default=10,
+            help='number of tests per benchmark')
+
+args = commandline_parser$parse_args()
+
+fft_benchmark = data.table(summary(microbenchmark(list=fft_list,
+                                                  times=args$n)))
+ls_benchmark = data.table(summary(microbenchmark(list=ls_list,
+                                                 times=args$n)))
 
 fft_benchmark$algorithm = "fft"
 ls_benchmark$algorithm = "ls"
@@ -62,18 +75,25 @@ fft_benchmark$steps = steps
 ls_benchmark$steps = steps
 
 benchmark = rbind(fft_benchmark, ls_benchmark)
-print(benchmark)
 plot = ggplot(benchmark,
               aes(x=steps,
                   y=median,
                   color=algorithm),
               group=type) + geom_line() + ylab(
               "runtime (us)") + xlab(
-              "phase steps")
+              "phase steps") + geom_ribbon(aes(
+              x=steps,
+              ymin=lq,
+              ymax=uq,
+              fill=algorithm,
+              linetype=NA
+              ),
+                               alpha=0.3) + scale_y_continuous()
 
 warnings()
-x11(width=20, height=12)
+file_name = "benchmark_fft_ls.pdf"
+pdf(file_name,
+    width=17, height=12)
 print(plot)
-ggsave("benchmark_fft_ls.pdf", plot)
-message("Press Return To Continue")
-invisible(readLines("stdin", n=1))
+dev.off()
+embed_fonts("benchmark_fft_ls.pdf")

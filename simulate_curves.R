@@ -50,13 +50,14 @@ fit_curves = function(curves) {
 statistical_tests = function(x) {
     return(c(
                 mean(x),
+                median(x),
                 sd(x),
                 kurtosis(x),
                 skewness(x)
                 ))
 }
 
-names = c("mean", "sd",
+names = c("mean", "median", "sd",
           "kurtosis", "skewness"
           )
 
