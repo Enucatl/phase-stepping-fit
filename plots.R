@@ -16,9 +16,11 @@ load(args$f) #constant_analysis, visibility_analysis
 setkeyv(constant_analysis, c("stat", "algorithm"))
 setkeyv(visibility_analysis, c("stat", "algorithm"))
 
-names = c("mean", "sd", "kurtosis", "skewness")
+names = c("mean", "median", "sd", "kurtosis", "skewness")
 y_scales = list(
               mean=c(scale_y_continuous, scale_y_continuous,
+                     scale_y_continuous, scale_y_log10),
+              median=c(scale_y_continuous, scale_y_continuous,
                      scale_y_continuous, scale_y_log10),
               sd=c(scale_y_log10, scale_y_log10,
                      scale_y_log10, scale_y_continuous),
@@ -29,6 +31,8 @@ y_scales = list(
               )
 x_scales = list(
               mean=c(scale_x_log10, scale_x_log10,
+                     scale_x_log10, scale_x_log10),
+              median=c(scale_x_log10, scale_x_log10,
                      scale_x_log10, scale_x_log10),
               sd=c(scale_x_continuous, scale_x_continuous,
                      scale_x_continuous, scale_x_continuous),
