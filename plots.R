@@ -45,12 +45,12 @@ phase_stepping_curves_plot <- function(
     print(c("plotting", x_parameter, y_parameter))
     print(sapply(dataset, class))
     plot <- ggplot(dataset[J(statistical_test)],
-                aes(x=x_parameter,
+                aes_string(x=x_parameter,
                 y=y_parameter,
-                colour=algorithm,
+                colour="algorithm",
                 linetype=as.factor(linetype_factor)))
     plot <- plot + geom_line(
-                aes(group=interaction(algorithm, linetype_factor)))
+                aes(group=interaction("algorithm", linetype_factor)))
     plot <- plot + y_scale(name=sprintf("%s %s", y_parameter, statistical_test))
     plot <- plot + scale_linetype_discrete(
                 name=remove_true_string(linetype_factor))
