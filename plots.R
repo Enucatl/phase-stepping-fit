@@ -1,7 +1,6 @@
 #!/usr/bin/env Rscript
 
 library(argparse)
-library(gridExtra)
 library(ggplot2)
 library(data.table)
 
@@ -9,104 +8,112 @@ commandline_parser = ArgumentParser(
         description="draw results for fit analysis") 
 
 commandline_parser$add_argument('-f', '--file',
-            type='character', nargs='?', default='data_analysis.rda')
+            type='character', nargs='?', default='data_analysis.rda',
+            help='file with the data.tables')
+#commandline_parser$add_argument('-o', '--output',
+            #type='character', nargs='?', default='pgf',
+            #'output format for the graphs')
+commandline_parser$add_argument('-w', '--width',
+            type='double', nargs='?', default=4.6,
+            help='width of each graph (in)')
+#commandline_parser$add_argument('-h', '--height',
+            #type='double', nargs='?', default=2.3,
+            #help='height of each graph (in)')
 
 args = commandline_parser$parse_args()
+format <- "pgf"
+width <- args$w
+height <- width * 0.618
+source("scales.R")
+source("devices.R")
 load(args$f) #constant_analysis, visibility_analysis
 setkeyv(constant_analysis, c("stat", "algorithm"))
 setkeyv(visibility_analysis, c("stat", "algorithm"))
 
-names = c("mean", "median", "sd", "kurtosis", "skewness")
-y_scales = list(
-              mean=c(scale_y_continuous, scale_y_continuous,
-                     scale_y_continuous, scale_y_log10),
-              median=c(scale_y_continuous, scale_y_continuous,
-                     scale_y_continuous, scale_y_log10),
-              sd=c(scale_y_log10, scale_y_log10,
-                     scale_y_log10, scale_y_continuous),
-              kurtosis=c(scale_y_continuous, scale_y_continuous,
-                     scale_y_continuous, scale_y_continuous),
-              skewness=c(scale_y_continuous, scale_y_continuous,
-                     scale_y_continuous, scale_y_continuous)
-              )
-x_scales = list(
-              mean=c(scale_x_log10, scale_x_log10,
-                     scale_x_log10, scale_x_log10),
-              median=c(scale_x_log10, scale_x_log10,
-                     scale_x_log10, scale_x_log10),
-              sd=c(scale_x_continuous, scale_x_continuous,
-                     scale_x_continuous, scale_x_continuous),
-              kurtosis=c(scale_x_log10, scale_x_log10,
-                     scale_x_log10, scale_x_log10),
-              skewness=c(scale_x_log10, scale_x_log10,
-                     scale_x_log10, scale_x_log10)
-              )
-
-
-file_name = "graphs.pdf"
-pdf(file_name,
-    width=17, height=12)
-for(statistical_test in names) {
-    graph_phase_constant = ggplot(constant_analysis[J(statistical_test)],
-                        aes(x=true_constant,
-                            y=phase,
-                            color=algorithm,
-                            linetype=as.factor(true_visibility)
-                            )) + geom_line(
-                        aes(group=interaction(algorithm, true_visibility)))
-    graph_phase_constant = graph_phase_constant + y_scales[[statistical_test]][[1]](
-                                name=sprintf("phase %s", statistical_test)
-                                ) + scale_linetype_discrete(
-                                name="visibility") +
-                                x_scales[[statistical_test]][[1]](name="constant")
-    graph_phase_visibility = ggplot(visibility_analysis[J(statistical_test)],
-                        aes(x=true_visibility,
-                            y=phase,
-                            color=algorithm,
-                            linetype=as.factor(true_constant),
-                            )) + geom_line(
-                        aes(group=interaction(algorithm, true_constant)))
-    graph_phase_visibility = graph_phase_visibility + y_scales[[statistical_test]][[2]](
-                                name=sprintf("phase %s", statistical_test)
-                                ) + scale_linetype_discrete(name="constant"
-                                ) + annotate(geom="text",
-                                x=Inf, y=Inf, hjust=1, vjust=1, label=sprintf("
-                                    Parameters for all the plots
-                                    phase steps = %i
-                                    phase value = %.2f
-                                    simulated curves per point = %i
-                                    poisson noise
-                                ", steps, phase, n)) + x_scales[[statistical_test]][[2]](
-                                name="visibility")   
-    graph_visibility_constant = ggplot(constant_analysis[J(statistical_test)],
-                        aes(x=true_constant,
-                            y=visibility,
-                            color=algorithm,
-                            linetype=as.factor(true_visibility),
-                            )) + geom_line(
-                        aes(group=interaction(algorithm, true_visibility)))
-    graph_visibility_constant = graph_visibility_constant + y_scales[[statistical_test]][[3]](
-                                name=sprintf("visibility %s", statistical_test)
-                                ) + scale_linetype_discrete(name="visibility") + x_scales[[statistical_test]][[3]](
-                                name="constant")   
-    graph_visibility_visibility = ggplot(visibility_analysis[J(statistical_test)],
-                        aes(x=true_visibility,
-                            y=visibility,
-                            color=algorithm,
-                            linetype=as.factor(true_constant),
-                            )) + geom_line(
-                        aes(group=interaction(algorithm, true_constant)))
-    graph_visibility_visibility = graph_visibility_visibility + y_scales[[statistical_test]][[4]](
-                                name=sprintf("visibility %s", statistical_test)
-                                ) + scale_linetype_discrete(name="constant") + x_scales[[statistical_test]][[4]](
-                                name="visibility")   
-
-    graphs = arrangeGrob(
-                graph_phase_constant, graph_phase_visibility,
-                graph_visibility_constant, graph_visibility_visibility,
-                nrow=2)
-    print(graphs)
+remove_true_string <- function(string) {
+    return(gsub("true_", "", string))
 }
-dev.off()
-embed_fonts(file_name)
+
+phase_stepping_curves_plot <- function(
+    dataset,
+    statistical_test,
+    x_parameter,
+    y_parameter,
+    linetype_factor,
+    x_scale,
+    y_scale) {
+    print(c("plotting", x_parameter, y_parameter))
+    print(sapply(dataset, class))
+    plot <- ggplot(dataset[J(statistical_test)],
+                aes(x=x_parameter,
+                y=y_parameter,
+                colour=algorithm,
+                linetype=as.factor(linetype_factor)))
+    plot <- plot + geom_line(
+                aes(group=interaction(algorithm, linetype_factor)))
+    plot <- plot + y_scale(name=sprintf("%s %s", y_parameter, statistical_test))
+    plot <- plot + scale_linetype_discrete(
+                name=remove_true_string(linetype_factor))
+    plot <- plot + x_scale(name=remove_true_string(x_parameter))
+    plot <- plot + scale_colour_discrete(
+                name="algorithm",
+                breaks=c("fft", "ls"),
+                labels=c("unweighted", "weighted"))
+    l <- list(
+                dataset=dataset[J(statistical_test)],
+                statistical_test=statistical_test,
+                x_parameter=x_parameter,
+                y_parameter=y_parameter,
+                x_scale=x_scale,
+                y_scale=y_scale,
+                linetype_factor=linetype_factor)
+    print(l)
+    print(plot)
+    dev.off()
+    return(plot)
+}
+
+statistical_tests <- c("mean", "median", "sd", "kurtosis", "skewness")
+y_parameters <- c("phase", "visibility")
+x_parameters <- c("true_visibility", "true_constant")
+datasets <- list(true_constant=constant_analysis,
+                true_visibility=visibility_analysis)
+linetype_factors <- list(true_constant="true_visibility",
+                true_visibility="true_constant")
+
+x_scales <- x_scales_factory(statistical_tests, x_parameters, y_parameters)
+y_scales <- y_scales_factory(statistical_tests, x_parameters, y_parameters)
+
+device <- devices[[format]]
+postprocessing_function <- postprocessing_functions[[format]]
+
+for(statistical_test in statistical_tests) {
+    for (x_parameter in x_parameters) {
+        for (y_parameter in y_parameters) {
+            file_name <- sprintf("stats_%s_%s.%s",
+                                 y_parameter,
+                                 remove_true_string(x_parameter),
+                                 format)
+            device(file_name, width=width, height=height)
+            dataset <- datasets[[x_parameter]]
+            linetype_factor <- linetype_factors[[x_parameter]]
+            x_scale <- x_scales[[statistical_test]][[x_parameter]][[y_parameter]]
+            y_scale <- y_scales[[statistical_test]][[x_parameter]][[y_parameter]]
+            graph <- phase_stepping_curves_plot(dataset, statistical_test,
+                                                x_parameter, y_parameter,
+                                                linetype_factor,
+                                                x_scale, y_scale)
+            postprocessing_function(file_name)
+        }
+    }
+}
+
+print(
+      sprintf("
+              Parameters for all the plots
+              phase steps = %i
+              phase value = %.2f
+              simulated curves per point = %i
+              poisson noise
+              ", steps, phase, n))
 warnings()

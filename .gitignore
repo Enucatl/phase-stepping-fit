@@ -6,3 +6,5 @@
 *.rda
 table
 Rprof.out
+*.pgf
+*.svg
