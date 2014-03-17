@@ -20,6 +20,18 @@ commandline_parser$add_argument('-w', '--width',
             #type='double', nargs='?', default=2.3,
             #help='height of each graph (in)')
 
+theme_set(theme_bw(base_size=11) + theme(
+legend.key.size=unit(1, 'lines'),
+text=element_text(face='plain', family='CM Roman'),
+legend.title=element_text(face='plain'),
+axis.line=element_line(color='black'),
+axis.title.y=element_text(vjust=0.1),
+axis.title.x=element_text(vjust=0.1),
+panel.grid.major = element_blank(),
+panel.grid.minor = element_blank(),
+panel.border = element_blank()
+))
+
 args = commandline_parser$parse_args()
 format <- "pgf"
 width <- args$w
@@ -50,7 +62,8 @@ phase_stepping_curves_plot <- function(
     plot <- plot + geom_line(
                 aes_string(
                 group=paste0("interaction(algorithm, ", linetype_factor, ")")))
-    plot <- plot + y_scale()
+    plot <- plot + y_scale(name=sprintf("reconstructed %s %s", y_parameter,
+                                       statistical_test))
     plot <- plot + scale_linetype_discrete(
                 name=remove_true_string(linetype_factor))
     plot <- plot + x_scale(name=remove_true_string(x_parameter))
