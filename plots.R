@@ -42,16 +42,15 @@ phase_stepping_curves_plot <- function(
     linetype_factor,
     x_scale,
     y_scale) {
-    print(c("plotting", x_parameter, y_parameter))
-    print(sapply(dataset, class))
     plot <- ggplot(dataset[J(statistical_test)],
                 aes_string(x=x_parameter,
                 y=y_parameter,
                 colour="algorithm",
-                linetype=as.factor(linetype_factor)))
+                linetype=linetype_factor))
     plot <- plot + geom_line(
-                aes(group=interaction("algorithm", linetype_factor)))
-    plot <- plot + y_scale(name=sprintf("%s %s", y_parameter, statistical_test))
+                aes_string(
+                group=paste0("interaction(algorithm, ", linetype_factor, ")")))
+    plot <- plot + y_scale()
     plot <- plot + scale_linetype_discrete(
                 name=remove_true_string(linetype_factor))
     plot <- plot + x_scale(name=remove_true_string(x_parameter))
@@ -59,25 +58,16 @@ phase_stepping_curves_plot <- function(
                 name="algorithm",
                 breaks=c("fft", "ls"),
                 labels=c("unweighted", "weighted"))
-    l <- list(
-                dataset=dataset[J(statistical_test)],
-                statistical_test=statistical_test,
-                x_parameter=x_parameter,
-                y_parameter=y_parameter,
-                x_scale=x_scale,
-                y_scale=y_scale,
-                linetype_factor=linetype_factor)
-    print(l)
-    print(plot)
-    dev.off()
     return(plot)
 }
 
 statistical_tests <- c("mean", "median", "sd", "kurtosis", "skewness")
 y_parameters <- c("phase", "visibility")
 x_parameters <- c("true_visibility", "true_constant")
-datasets <- list(true_constant=constant_analysis,
-                true_visibility=visibility_analysis)
+datasets <- list(true_constant=constant_analysis[,
+                    true_visibility:=as.factor(true_visibility)],
+                true_visibility=visibility_analysis[,
+                    true_constant:=as.factor(true_constant)])
 linetype_factors <- list(true_constant="true_visibility",
                 true_visibility="true_constant")
 
@@ -90,9 +80,10 @@ postprocessing_function <- postprocessing_functions[[format]]
 for(statistical_test in statistical_tests) {
     for (x_parameter in x_parameters) {
         for (y_parameter in y_parameters) {
-            file_name <- sprintf("stats_%s_%s.%s",
+            file_name <- sprintf("stats_%s_%s_%s.%s",
                                  y_parameter,
                                  remove_true_string(x_parameter),
+                                 statistical_test,
                                  format)
             device(file_name, width=width, height=height)
             dataset <- datasets[[x_parameter]]
@@ -103,6 +94,8 @@ for(statistical_test in statistical_tests) {
                                                 x_parameter, y_parameter,
                                                 linetype_factor,
                                                 x_scale, y_scale)
+            print(graph)
+            dev.off()
             postprocessing_function(file_name)
         }
     }
